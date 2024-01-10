@@ -1,0 +1,29 @@
+# Virtual Environment
+/.venv
+/Pipfile.lock
+
+# Local development settings
+/.env
+
+# Compiled Python files
+__pycache__/
+*.pyc
+
+# Flask migration directory
+/migrations/
+
+# Environment variables file
+.env
+
+# Log files
+*.log
+
+# User-specific files
+*.idea/
+*.vscode/
+
+# Ignore the Pipenv virtual environment
+/.venv
+
+# Ignore the Pipfile
+Pipfile
