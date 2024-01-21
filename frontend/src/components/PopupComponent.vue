@@ -20,13 +20,15 @@ export default {
     props: {
         message: String,
         feedback: Boolean,
+        scrolling: Boolean,
     },
     methods: {
         triggerClose() {
             this.$emit('close');
         },
         triggerFeedback() {
-            this.$emit('feedback');
+            const param1 = this.scrolling;
+            this.$emit('feedback', param1);
         }
     }
 }
