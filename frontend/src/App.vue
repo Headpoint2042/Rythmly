@@ -21,17 +21,18 @@
 import ButtonsBPMComponent from './components/ButtonsBPMComponent.vue';
 import AIFeedbackComponent from './components/AIFeedbackComponent.vue';
 import Popup from './components/PopupComponent.vue';
+import { analyzeSession, saveSession } from './api';
 
 export default {
   name: 'App',
   data() {
     return {
       open: false,
-      msg1: "The recording was done successfully. Please wait for the AI Assistant to finish analyzing",
-      msg2: "Unfortunately, your playing was not done properly. It would be recommended to try to practice with 10 BPM slower",
-      msg3: "Congratulations, your playing seems to be done properly. I would advice to increase the BPM with 10",
+      analysisMessage: "",
+      analysisSuggestion: null, // "increase" | "decrease" | "maintain"
       feedback: false,
-      scrolling: false, // Added scrolling boolean
+      scrolling: false,
+      loading: false,
     }
   },
   components: {
@@ -41,34 +42,61 @@ export default {
   },
   methods: {
     closePopup() {
-      this.open = false
+      this.open = false;
       if (!this.feedback) {
-        this.startDelayedEvent(true);
+        this.requestAnalysis();
       } else {
         this.$refs.aiComponent.aiListening();
       }
     },
     openPopup() {
-      this.open = true
+      this.open = true;
     },
-    feedbackEvent(param1) {
+    feedbackEvent() {
       this.$refs.aiComponent.aiListening();
-      if (param1) {
+      const bpm = this.$refs.buttons.bpm;
+
+      if (this.analysisSuggestion === 'increase') {
         this.increaseTheBPM();
-      } else {
+      } else if (this.analysisSuggestion === 'decrease') {
         this.decreaseTheBPM();
       }
+
+      saveSession({
+        bpm,
+        duration_seconds: 5,
+        success: this.analysisSuggestion === 'increase',
+      });
+
       this.open = false;
       this.scrolling = false;
     },
     aiTrigger() {
-      this.startDelayedEvent()
+      this.showRecordingMessage();
     },
-    startDelayedEvent(feedback = false) {
-      setTimeout(() => {
-        this.feedback = feedback
-        this.openPopup()
-      }, 5000);
+    showRecordingMessage() {
+      this.feedback = false;
+      this.analysisMessage = "The recording was done successfully. Please wait for the AI Assistant to finish analyzing...";
+      this.openPopup();
+    },
+    async requestAnalysis() {
+      this.loading = true;
+      const bpm = this.$refs.buttons.bpm;
+
+      try {
+        const result = await analyzeSession(bpm);
+        this.analysisMessage = result.message;
+        this.analysisSuggestion = result.suggestion;
+        this.feedback = true;
+        this.openPopup();
+      } catch {
+        this.analysisMessage = "Could not reach the AI server. Please make sure the backend is running.";
+        this.analysisSuggestion = null;
+        this.feedback = false;
+        this.openPopup();
+      } finally {
+        this.loading = false;
+      }
     },
     decreaseTheBPM() {
       this.$refs.buttons.decreaseBPM();
@@ -79,7 +107,7 @@ export default {
       this.$refs.buttons.increaseBPM();
     },
     handleMouseWheel() {
-      this.scrolling = true; // Set scrolling to true when the mouse wheel is triggered
+      this.scrolling = true;
     },
   },
 
@@ -90,11 +118,7 @@ export default {
       }
     },
     message() {
-      if (this.feedback) {
-        return this.scrolling ? this.msg3 : this.msg2;
-      } else {
-        return this.msg1;
-      }
+      return this.analysisMessage;
     },
   },
 }
